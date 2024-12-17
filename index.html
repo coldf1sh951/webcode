@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Linux服务器探针</title>
+    <!-- 示例中使用Google字体与Font Awesome图标，可根据实际情况本地化 -->
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+
+    <style>
+        :root {
+            --bg-color: #f4f4f4;
+            --text-color: #333;
+            --card-bg: #fff;
+            --header-bg: #222;
+            --header-text: #fff;
+            --accent-color: #007BFF;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1e1e1e;
+            --text-color: #ccc;
+            --card-bg: #2a2a2a;
+            --header-bg: #000;
+            --header-text: #fff;
+            --accent-color: #3399ff;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg-color);
+            font-family: 'Roboto', sans-serif;
+            color: var(--text-color);
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--header-bg);
+            padding: 10px 20px;
+            color: var(--header-text);
+        }
+
+        header .logo {
+            font-size: 1.2em;
+            font-weight: 500;
+        }
+
+        header .controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        header .controls button {
+            background: transparent;
+            border: none;
+            color: var(--header-text);
+            cursor: pointer;
+            font-size: 1em;
+            padding: 5px;
+        }
+
+        main {
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .sidebar {
+            flex: 0 0 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        .card h2 {
+            margin: 0;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            color: var(--text-color);
+            font-weight: 500;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        .usage-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            gap: 10px;
+        }
+
+        .usage-item {
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .usage-item span.value {
+            display: block;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .detail-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .chart-container,
+        .process-list {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        footer {
+            text-align: center;
+            padding: 10px;
+            font-size: 0.8em;
+            color: var(--text-color);
+        }
+
+        /* 浮动信息提示 */
+        .tooltip {
+            position: absolute;
+            background: #333;
+            color: #fff;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            pointer-events: none;
+            transform: translate(-50%, -100%);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+    <header>
+        <div class="logo">Linux服务器探针</div>
+        <div class="controls">
+            <div class="server-name">服务器: my-linux-server</div>
+            <button id="refreshBtn"><i class="fas fa-sync-alt"></i> 刷新</button>
+            <button id="themeToggle"><i class="fas fa-adjust"></i> 切换主题</button>
+        </div>
+    </header>
+    <main>
+        <div class="sidebar">
+            <div class="card" id="system-overview">
+                <h2>系统概览</h2>
+                <div class="usage-container">
+                    <div class="usage-item" data-info="CPU使用率表示当前服务器CPU的使用情况">
+                        <i class="fas fa-microchip"></i>
+                        <span class="value" id="cpuUsage">--%</span>
+                        <div>CPU</div>
+                    </div>
+                    <div class="usage-item" data-info="内存使用率表示当前内存占用情况">
+                        <i class="fas fa-memory"></i>
+                        <span class="value" id="memUsage">--%</span>
+                        <div>内存</div>
+                    </div>
+                    <div class="usage-item" data-info="磁盘使用率表示当前磁盘空间占用情况">
+                        <i class="fas fa-hdd"></i>
+                        <span class="value" id="diskUsage">--%</span>
+                        <div>磁盘</div>
+                    </div>
+                </div>
+                <div class="usage-item" style="margin-top:10px;">
+                    <i class="fas fa-tachometer-alt"></i> 负载: <span id="loadAvg">--</span>
+                </div>
+            </div>
+        </div>
+        <div class="detail-panel">
+            <div class="chart-container">
+                <h2>网络流量 (实时)</h2>
+                <canvas id="netChart"></canvas>
+            </div>
+            <div class="process-list">
+                <h2>进程排行</h2>
+                <ul id="processes"></ul>
+            </div>
+        </div>
+    </main>
+    <footer>
+        © 2024 Linux探针 - 数据最后更新: <span id="lastUpdate">--:--:--</span>
+    </footer>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // 假设后端接口: /api/status 返回JSON格式：{cpu: 30, mem:40, disk:70, load: "0.5,0.7,1.2", netIn:[...], netOut:[...], processes:[{name:"nginx",cpu:2,mem:1},...] }
+
+        const tooltip = document.getElementById('tooltip');
+        document.querySelectorAll('.usage-item').forEach(item => {
+            item.addEventListener('mouseenter', (e) => {
+                const info = item.getAttribute('data-info');
+                tooltip.style.left = e.clientX + 'px';
+                tooltip.style.top = (e.clientY - 10) + 'px';
+                tooltip.textContent = info;
+                tooltip.style.opacity = 1;
+            });
+            item.addEventListener('mousemove', (e) => {
+                tooltip.style.left = e.clientX + 'px';
+                tooltip.style.top = (e.clientY - 10) + 'px';
+            });
+            item.addEventListener('mouseleave', () => {
+                tooltip.style.opacity = 0;
+            });
+        });
+
+        // 主题切换
+        const body = document.body;
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            body.dataset.theme = (body.dataset.theme === 'dark') ? 'light' : 'dark';
+        });
+
+        // 创建网络图表
+        const ctx = document.getElementById('netChart').getContext('2d');
+        const netChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: '入站流量(KB/s)',
+                        data: [],
+                        borderColor: 'rgba(0,123,255,0.7)',
+                        fill: false,
+                        tension: 0.1
+                    },
+                    {
+                        label: '出站流量(KB/s)',
+                        data: [],
+                        borderColor: 'rgba(255,99,132,0.7)',
+                        fill: false,
+                        tension: 0.1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 500
+                },
+                scales: {
+                    x: { title: { display: true, text: '时间' } },
+                    y: { title: { display: true, text: 'KB/s' }, beginAtZero: true }
+                }
+            }
+        });
+
+        async function fetchData() {
+            // 这里使用假数据模拟，可改成真实接口
+            const fakeData = {
+                cpu: Math.floor(Math.random() * 100),
+                mem: Math.floor(Math.random() * 100),
+                disk: Math.floor(Math.random() * 100),
+                load: "0.5,0.7,1.2",
+                netIn: Math.floor(Math.random() * 100),
+                netOut: Math.floor(Math.random() * 100),
+                processes: [
+                    { name: "nginx", cpu: 2.1, mem: 1.5 },
+                    { name: "mysqld", cpu: 3.5, mem: 5.2 },
+                    { name: "redis-server", cpu: 0.5, mem: 0.8 }
+                ]
+            };
+
+            return new Promise(resolve => {
+                setTimeout(() => resolve(fakeData), 500);
+            });
+        }
+
+        async function updateData() {
+            const data = await fetchData();
+            document.getElementById('cpuUsage').textContent = data.cpu + "%";
+            document.getElementById('memUsage').textContent = data.mem + "%";
+            document.getElementById('diskUsage').textContent = data.disk + "%";
+            document.getElementById('loadAvg').textContent = data.load;
+
+            // 更新网络图表数据
+            const currentTime = new Date().toLocaleTimeString();
+            if (netChart.data.labels.length > 30) {
+                netChart.data.labels.shift();
+                netChart.data.datasets[0].data.shift();
+                netChart.data.datasets[1].data.shift();
+            }
+            netChart.data.labels.push(currentTime);
+            netChart.data.datasets[0].data.push(data.netIn);
+            netChart.data.datasets[1].data.push(data.netOut);
+            netChart.update();
+
+            // 更新进程列表
+            const processesList = document.getElementById('processes');
+            processesList.innerHTML = '';
+            data.processes.forEach(p => {
+                const li = document.createElement('li');
+                li.textContent = `${p.name} | CPU: ${p.cpu}% | MEM: ${p.mem}%`;
+                processesList.appendChild(li);
+            });
+
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+
+        document.getElementById('refreshBtn').addEventListener('click', updateData);
+
+        // 初始化加载
+        updateData();
+        // 定时刷新数据（可根据需求调整）
+        setInterval(updateData, 5000);
+    </script>
+</body>
+
+</html>
