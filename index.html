@@ -8,10 +8,172 @@
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+      <style>
+        :root {
+            --bg-color: #f4f4f4;
+            --text-color: #333;
+            --card-bg: #fff;
+            --header-bg: #222;
+            --header-text: #fff;
+            --accent-color: #007BFF;
+        }
 
-    <style>
-        /* 上面的样式保持不变 */
-    </style>
+        [data-theme="dark"] {
+            --bg-color: #1e1e1e;
+            --text-color: #ccc;
+            --card-bg: #2a2a2a;
+            --header-bg: #000;
+            --header-text: #fff;
+            --accent-color: #3399ff;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg-color);
+            font-family: 'Roboto', sans-serif;
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--header-bg);
+            padding: 10px 20px;
+            color: var(--header-text);
+        }
+
+        header .logo {
+            font-size: 1.2em;
+            font-weight: 500;
+        }
+
+        header .controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        header .controls button {
+            background: transparent;
+            border: none;
+            color: var(--header-text);
+            cursor: pointer;
+            font-size: 1em;
+            padding: 5px;
+        }
+
+        main {
+            display: flex;
+            flex-grow: 1;
+            padding: 20px;
+            gap: 20px;
+            overflow: hidden; /* 防止滚动过大 */
+        }
+
+        .sidebar {
+            flex: 0 0 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto; /* 允许垂直滚动 */
+            max-height: 100%; /* 限制最大高度 */
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        .card h2 {
+            margin: 0;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            color: var(--text-color);
+            font-weight: 500;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        .usage-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            gap: 10px;
+        }
+
+        .usage-item {
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .usage-item span.value {
+            display: block;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .detail-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto; /* 允许垂直滚动 */
+        }
+
+        .chart-container {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            height: 300px; /* 固定图表高度 */
+            overflow: hidden;
+        }
+
+        .process-list {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            max-height: 300px; /* 固定进程列表高度 */
+            overflow-y: auto; /* 允许垂直滚动 */
+        }
+
+        footer {
+            text-align: center;
+            padding: 10px;
+            font-size: 0.8em;
+            color: var(--text-color);
+        }
+
+        .tooltip {
+            position: absolute;
+            background: #333;
+            color: #fff;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            pointer-events: none;
+            transform: translate(-50%, -100%);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        /* 使得图表和进程内容不会随着滚动条而变动 */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+     </style>
 </head>
 
 <body data-theme="light">
