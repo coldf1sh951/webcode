@@ -4,11 +4,20 @@ const net = require('net');
 
 // 监听端口
 const PORT = 3000;
+fetch('http://localhost:3000/api', {
+    method: 'GET',
+})
+    .then(response => response.json())
+    .then(data => {
+        console.log('收到的数据:', data);
+    })
+    .catch(error => {
+        console.error('发生错误:', error);
+    });
 
 app.get('/check-port', (req, res) => {
     const port = req.query.port;
-
-    if (!port || isNaN(port) || port < 1 || port > 65535) {
+     if (!port || isNaN(port) || port < 1 || port > 65535) {
         return res.json({ success: false, message: 'Invalid port number.' });
     }
 
